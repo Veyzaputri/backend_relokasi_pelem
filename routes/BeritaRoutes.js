@@ -19,8 +19,8 @@ const upload = multer({ storage: storage });
 router.get('/berita', getBerita);
 router.get('/berita/:id_berita', getBeritaById);
 // Gunakan upload.single('gambar') untuk menerima satu file dengan nama field 'gambar'
-router.post('/add-berita', upload.single('gambar'), createBerita);
-router.patch('/berita/:id_berita', upload.single('gambar'), updateBerita);
+router.post('/add-berita', upload.single('file'), createBerita);
+router.patch('/berita/:id_berita', upload.single('file'), updateBerita);
 router.delete('/berita/:id_berita', deleteBerita);
 
 export default router;
