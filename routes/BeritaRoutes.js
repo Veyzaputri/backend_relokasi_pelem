@@ -6,6 +6,7 @@ import {
     updateBerita,
     deleteBerita,
 } from "../controllers/BeritaController.js";
+import { authMiddleware } from "../middleware/AuthMiddleware.js";
 import multer from "multer";
 
 const router = express.Router();
