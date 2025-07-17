@@ -1,6 +1,7 @@
 import { where } from "sequelize";
 import fs from "fs";
 import path from "path";
+import { put, del } from '@vercel/blob';
 import Tokoh from "../models/TokohModel.js";
 
 export const getTokoh = async (req, res) => {
@@ -38,10 +39,16 @@ export const createTokoh = async (req, res) => {
     if (!nama_tokoh || jabatan.trim() === "") {
       return res.status(400).json({ msg: "nama tokoh / jabatan tidak boleh kosong" });
     }
-
-    const gambar = req.file ? req.file.filename : null;
-
-    await Tokoh.create({ nama_tokoh, jabatan, gambar });
+    if (!req.file) {
+            return res.status(400).json({ msg: "File gambar wajib di-upload" });
+        }
+    
+    const { url } = await put(
+            `tokoh/${req.file.originalname}`, // Nama file di Blob
+            req.file.buffer,                  // Konten file
+            { access: 'public' }              // Akses publik agar bisa dilihat
+        );
+    await Tokoh.create({ nama_tokoh, jabatan, gambar:url, });
 
     res.status(201).json({ msg: "Tokoh berhasil ditambahkan" });
   } catch (error) {
@@ -58,21 +65,27 @@ export const updateTokoh = async (req, res) => {
     if (!tokoh) return res.status(404).json({ msg: "Tokoh tidak ditemukan" });
 
     const { nama_tokoh, jabatan} = req.body;
-    let fileName = tokoh.gambar;
+    let imageUrl = berita.gambar;
 
     if (req.file) {
-      const oldPath = path.join("public/uploads", tokoh.gambar);
-      if (fs.existsSync(oldPath)) {
-        fs.unlinkSync(oldPath);
-      }
-      fileName = req.file.filename;
-    }
+            // 1. Hapus gambar lama dari Vercel Blob jika ada
+            if (tokoh.gambar) {
+                await del(berita.gambar);
+            }
+            // 2. Upload gambar baru
+            const { url } = await put(
+                `tokoh/${req.file.originalname}`,
+                req.file.buffer,
+                { access: 'public' }
+            );
+            imageUrl = url; // Gunakan URL baru
+        }
 
     await Tokoh.update(
       {
         nama_tokoh,
         jabatan,
-        gambar: fileName,
+        gambar: imageUrl,
       },
       { where: { id_tokoh: id } }
     );
@@ -89,12 +102,16 @@ export const deleteTokoh = async (req, res) => {
         const tokoh = await Tokoh.findByPk(req.params.id_tokoh);
 if (!tokoh) return res.status(404).json({ msg: "Tokoh tidak ditemukan" });
 
-        await Tokoh.destroy({
-            where: {
-                id_tokoh: req.params.id_tokoh
-            }
+        if (tokoh.gambar) {
+            await del(tokoh.gambar);
+        }
+
+        // 2. Hapus data dari database Neon
+        await Berita.destroy({
+            where: { id_berita: req.params.id_berita }
         });
-        res.status(200).json({ msg: "Tokoh berhasil dihapus" });
+
+        res.status(200).json({ msg: "Berita berhasil dihapus" });
     } catch (error) {
         console.log(error.message);
         res.status(500).json({ msg: "Terjadi kesalahan server" });
