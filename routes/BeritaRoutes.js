@@ -1,31 +1,25 @@
-import multer from "multer";
-// Konfigurasi penyimpanan file
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'public/uploads/'); // Pastikan folder ini ada
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname);
-  }
-});
-
-const upload = multer({ storage: storage });
-
 import express from "express";
 import {
     getBerita,
     getBeritaById,
     createBerita,
     updateBerita,
-    deleteBerita
-} from "../controller/BeritaController.js";
-import { authMiddleware } from "../middleware/AuthMiddleware.js";
+    deleteBerita,
+} from "../controllers/BeritaController.js";
+import multer from "multer";
 
 const router = express.Router();
-router.get("/berita", getBerita);
-router.get("/berita/:id_berita",authMiddleware, getBeritaById);
-router.post("/add-berita",authMiddleware, upload.single('file'), createBerita);
-router.put("/berita/:id_berita",authMiddleware, upload.single("file"), updateBerita);
-router.delete("/berita/:id_berita",authMiddleware, deleteBerita);
+
+// Konfigurasi Multer untuk memproses file di memori, bukan di disk
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage });
+
+// Terapkan middleware 'upload' hanya pada route yang membutuhkan upload file
+router.get('/berita', getBerita);
+router.get('/berita/:id_berita', getBeritaById);
+// Gunakan upload.single('gambar') untuk menerima satu file dengan nama field 'gambar'
+router.post('/berita', upload.single('gambar'), createBerita);
+router.patch('/berita/:id_berita', upload.single('gambar'), updateBerita);
+router.delete('/berita/:id_berita', deleteBerita);
 
 export default router;
