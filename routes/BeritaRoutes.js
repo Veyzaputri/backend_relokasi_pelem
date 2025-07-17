@@ -5,7 +5,7 @@ import {
     createBerita,
     updateBerita,
     deleteBerita,
-} from "../controllers/BeritaController.js";
+} from "../controller/BeritaController.js";
 import { authMiddleware } from "../middleware/AuthMiddleware.js";
 import multer from "multer";
 
