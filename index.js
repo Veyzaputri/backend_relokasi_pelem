@@ -34,7 +34,7 @@ app.use(
 );
 
 app.use(cors({
-  origin: "http://127.0.0.1:5500", // alamat Live Server kamu
+  origin: "https://frontend-relokasi-pelem.vercel.app", // alamat Live Server kamu
   credentials: true, // penting untuk session cookie
 }));
 
