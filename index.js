@@ -15,11 +15,16 @@ dotenv.config();
 
 // Inisialisasi Express
 const app = express();
+app.set('trust proxy', 1);
 
 // Middleware
 app.use('/uploads', express.static(path.resolve('public/uploads')));
 app.use(express.json());
 app.use(cookieParser());
+app.use(cors({
+  origin: "https://frontend-relokasi-pelem.vercel.app", // alamat Live Server kamu
+  credentials: true, // penting untuk session cookie
+}));
 app.use(
   session({
     secret: process.env.SESSION_SECRET,
@@ -27,16 +32,12 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: false,
+      secure: true,
+      sameSite: 'none',
       maxAge: 1000 * 60 * 60, // 1 jam
     },
   })
 );
-
-app.use(cors({
-  origin: "https://frontend-relokasi-pelem.vercel.app", // alamat Live Server kamu
-  credentials: true, // penting untuk session cookie
-}));
 
 // Routing
 app.use(UserRoute);
