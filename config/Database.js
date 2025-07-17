@@ -1,4 +1,4 @@
-import { Sequelize } from "sequelize";
+/*import { Sequelize } from "sequelize";
 import dotenv from "dotenv"; //untuk menyembunyikan data berharga
 
 dotenv.config();//ngekonfigurasi data dari file.env
@@ -15,6 +15,27 @@ const DB_PASSWORD = process.env.DB_PASSWORD;
 const db = new Sequelize(DB_NAME, DB_USERNAME, DB_PASSWORD, {
   host: process.env.DB_HOST,
   dialect: "mysql",
+});
+
+export default db;*/
+
+import { Sequelize } from "sequelize";
+import dotenv from "dotenv";
+import pg from 'pg';
+
+dotenv.config();
+
+const db = new Sequelize(process.env.POSTGRES_URL, {
+  dialect: "postgres",
+  protocol: "postgres",
+  dialectModule: pg,
+  dialectOptions: {
+    ssl: {
+      require: true,
+      rejectUnauthorized: false
+    }
+  },
+  logging: false
 });
 
 export default db;
