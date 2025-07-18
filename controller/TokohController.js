@@ -35,7 +35,7 @@ export const createTokoh = async (req, res) => {
   try {
     const {  nama_tokoh, jabatan} = req.body;
     
-    // Validasi isi berita
+    // Validasi isi tokoh
     if (!nama_tokoh || jabatan.trim() === "") {
       return res.status(400).json({ msg: "nama tokoh / jabatan tidak boleh kosong" });
     }
@@ -65,12 +65,12 @@ export const updateTokoh = async (req, res) => {
     if (!tokoh) return res.status(404).json({ msg: "Tokoh tidak ditemukan" });
 
     const { nama_tokoh, jabatan} = req.body;
-    let imageUrl = berita.gambar;
+    let imageUrl = tokoh.gambar;
 
     if (req.file) {
             // 1. Hapus gambar lama dari Vercel Blob jika ada
             if (tokoh.gambar) {
-                await del(berita.gambar);
+                await del(tokoh.gambar);
             }
             // 2. Upload gambar baru
             const { url } = await put(
@@ -107,11 +107,11 @@ if (!tokoh) return res.status(404).json({ msg: "Tokoh tidak ditemukan" });
         }
 
         // 2. Hapus data dari database Neon
-        await Berita.destroy({
-            where: { id_berita: req.params.id_berita }
+        await Tokoh.destroy({
+            where: { id_tokoh: req.params.id_tokoh }
         });
 
-        res.status(200).json({ msg: "Berita berhasil dihapus" });
+        res.status(200).json({ msg: "Tokoh berhasil dihapus" });
     } catch (error) {
         console.log(error.message);
         res.status(500).json({ msg: "Terjadi kesalahan server" });
