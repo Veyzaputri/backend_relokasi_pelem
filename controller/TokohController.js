@@ -36,9 +36,12 @@ export const createTokoh = async (req, res) => {
     const {  nama_tokoh, jabatan} = req.body;
     
     // Validasi isi tokoh
-    if (!nama_tokoh || jabatan.trim() === "") {
-      return res.status(400).json({ msg: "nama tokoh / jabatan tidak boleh kosong" });
-    }
+    if (!nama_tokoh || nama_tokoh.trim() === "") {
+    return res.status(400).json({ msg: "Nama tokoh tidak boleh kosong" });
+}
+if (!jabatan || jabatan.trim() === "") {
+    return res.status(400).json({ msg: "Jabatan tidak boleh kosong" });
+}
     if (!req.file) {
             return res.status(400).json({ msg: "File gambar wajib di-upload" });
         }
