@@ -22,7 +22,7 @@ app.use('/uploads', express.static(path.resolve('public/uploads')));
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
-  origin: "https://frontend-relokasi-pelem.vercel.app", // alamat Live Server kamu
+  origin: "https://desa-relokasi-pelem.my.id", // alamat Live Server kamu
   credentials: true, // penting untuk session cookie
 }));
 app.use(
