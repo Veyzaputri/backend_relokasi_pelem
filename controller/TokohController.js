@@ -1,144 +1,141 @@
-import { where } from "sequelize";
-import fs from "fs";
-import path from "path";
+// File: controllers/TokohController.js
+
 import { put, del } from '@vercel/blob';
 import Tokoh from "../models/TokohModel.js";
 
+// GET ALL TOKOH
 export const getTokoh = async (req, res) => {
     try {
-        const response = await Tokoh.findAll({order: [['createdAt', 'DESC']],});
+        const response = await Tokoh.findAll({ order: [['createdAt', 'DESC']] });
         res.status(200).json(response);
     } catch (error) {
-        console.log(error.message);
-        res.status(500).json({ msg: "Terjadi kesalahan server" });
+        console.error("Error getTokoh:", error.message);
+        res.status(500).json({ msg: "Terjadi kesalahan pada server" });
     }
-}
+};
 
+// GET TOKOH BY ID
 export const getTokohById = async (req, res) => {
     try {
-        const tokoh = await Tokoh.findOne({
-            where: { id_tokoh: req.params.id_tokoh }
-        });
-
+        const tokoh = await Tokoh.findOne({ where: { id_tokoh: req.params.id_tokoh } });
         if (!tokoh) {
             return res.status(404).json({ msg: "Tokoh tidak ditemukan" });
         }
-
         res.status(200).json(tokoh);
     } catch (error) {
-        console.log(error.message);
-        res.status(500).json({ msg: "Terjadi kesalahan server" });
+        console.error("Error getTokohById:", error.message);
+        res.status(500).json({ msg: "Terjadi kesalahan pada server" });
     }
-}
-
-export const createTokoh = async (req, res) => {
-  try {
-    const {  nama_tokoh, jabatan} = req.body;
-    
-    // Validasi isi tokoh
-    if (!nama_tokoh || nama_tokoh.trim() === "") {
-    return res.status(400).json({ msg: "Nama tokoh tidak boleh kosong" });
-}
-if (!jabatan || jabatan.trim() === "") {
-    return res.status(400).json({ msg: "Jabatan tidak boleh kosong" });
-}
-    if (!req.file) {
-            return res.status(400).json({ msg: "File gambar wajib di-upload" });
-        }
-    
-    const { url } = await put(
-            `tokoh/${req.file.originalname}`, // Nama file di Blob
-            req.file.buffer,                  // Konten file
-            { access: 'public' }              // Akses publik agar bisa dilihat
-        );
-    await Tokoh.create({ nama_tokoh, jabatan, gambar:url, });
-
-    res.status(201).json({ msg: "Tokoh berhasil ditambahkan" });
-  } catch (error) {
-    console.log(error.message);
-    res.status(500).json({ msg: "Terjadi kesalahan server" });
-  }
 };
 
+// CREATE TOKOH
+export const createTokoh = async (req, res) => {
+    try {
+        const { nama_tokoh, jabatan } = req.body;
+        if (!nama_tokoh || !jabatan) {
+            return res.status(400).json({ msg: "Nama dan jabatan tidak boleh kosong" });
+        }
+        if (!req.file) {
+            return res.status(400).json({ msg: "File gambar wajib diunggah" });
+        }
 
+        // Upload file ke Vercel Blob
+        const blob = await put(
+            `tokoh/${Date.now()}-${req.file.originalname}`, // Nama file unik
+            req.file.buffer, // Konten file dari multer
+            { access: 'public' }
+        );
+
+        // Simpan URL dari blob ke database
+        await Tokoh.create({
+            nama_tokoh,
+            jabatan,
+            gambar: blob.url // Simpan URL blob
+        });
+
+        res.status(201).json({ msg: "Tokoh berhasil ditambahkan" });
+    } catch (error) {
+        console.error("Error createTokoh:", error.message);
+        res.status(500).json({ msg: "Terjadi kesalahan pada server" });
+    }
+};
+
+// UPDATE TOKOH
 export const updateTokoh = async (req, res) => {
     try {
-        const tokoh = await Tokoh.findOne({ where: { id: req.params.id } });
+        const tokoh = await Tokoh.findOne({ where: { id_tokoh: req.params.id_tokoh } });
         if (!tokoh) {
             return res.status(404).json({ msg: "Data Tokoh tidak ditemukan." });
         }
 
         const { nama_tokoh, jabatan } = req.body;
-        // Validasi input dasar
         if (!nama_tokoh || !jabatan) {
-            return res.status(400).json({ msg: "Nama tokoh dan jabatan tidak boleh kosong." });
+            return res.status(400).json({ msg: "Nama dan jabatan tidak boleh kosong" });
         }
 
-        let fileName = tokoh.gambar; // Default ke gambar lama
+        let newImageUrl = tokoh.gambar; // Defaultnya pakai gambar lama
 
-        // Cek jika ada file baru yang diunggah
-        if (req.files && req.files.file) {
-            const file = req.files.file;
-            const fileSize = file.data.length;
-            const ext = path.extname(file.name);
-            const newFileName = file.md5 + ext;
+        // Jika ada file baru yang diunggah, ganti gambarnya
+        if (req.file) {
+            // 1. Upload gambar baru ke Vercel Blob
+            const newBlob = await put(
+                `tokoh/${Date.now()}-${req.file.originalname}`,
+                req.file.buffer,
+                { access: 'public' }
+            );
+            newImageUrl = newBlob.url; // Dapatkan URL baru
 
-            const allowedType = ['.png', '.jpg', '.jpeg'];
-            if (!allowedType.includes(ext.toLowerCase())) return res.status(422).json({ msg: "Format gambar tidak valid." });
-            if (fileSize > 5000000) return res.status(422).json({ msg: "Ukuran gambar harus kurang dari 5 MB." });
-
-            const newFilePath = `./public/images/${newFileName}`;
-            await file.mv(newFilePath); // Simpan file baru
-
-            // Hapus file lama jika ada dan beda nama
-            const oldFilePath = `./public/images/${tokoh.gambar}`;
-            if (tokoh.gambar && fs.existsSync(oldFilePath)) {
-                fs.unlinkSync(oldFilePath);
+            // 2. Hapus gambar lama dari Vercel Blob (jika ada)
+            if (tokoh.gambar) {
+                try {
+                    await del(tokoh.gambar);
+                } catch (delError) {
+                    console.error("Gagal hapus gambar lama dari blob, mungkin sudah tidak ada:", delError.message);
+                }
             }
-            
-            fileName = newFileName; // Gunakan nama file baru
         }
 
-        const url = `${req.protocol}://${req.get("host")}/images/${fileName}`;
-
+        // 3. Update data di database dengan URL gambar yang sesuai
         await Tokoh.update({
             nama_tokoh,
             jabatan,
-            gambar: fileName,
-            url: url
+            gambar: newImageUrl
         }, {
-            where: { id: req.params.id }
+            where: { id_tokoh: req.params.id_tokoh }
         });
 
         res.status(200).json({ msg: "Tokoh berhasil diperbarui." });
 
     } catch (error) {
-        console.error("Kesalahan pada fungsi updateTokoh:", error);
-        res.status(500).json({ msg: "Terjadi kesalahan pada server.", error: error.message });
+        console.error("Error updateTokoh:", error.message);
+        res.status(500).json({ msg: "Terjadi kesalahan pada server" });
     }
 };
+
+
+// DELETE TOKOH
 export const deleteTokoh = async (req, res) => {
     try {
-        const tokoh = await Tokoh.findByPk(req.params.id_tokoh);
-if (!tokoh) return res.status(404).json({ msg: "Tokoh tidak ditemukan" });
+        const tokoh = await Tokoh.findOne({ where: { id_tokoh: req.params.id_tokoh } });
+        if (!tokoh) {
+            return res.status(404).json({ msg: "Tokoh tidak ditemukan" });
+        }
 
+        // 1. Hapus gambar dari Vercel Blob
         if (tokoh.gambar) {
-    try {
-        const parsedUrl = new URL(tokoh.gambar);
-        await del(parsedUrl.pathname);
-    } catch (err) {
-        console.error("Gagal hapus gambar dari blob:", err.message);
-    }
-}
+           try {
+                await del(tokoh.gambar);
+           } catch (delError) {
+                console.error("Gagal hapus gambar dari blob:", delError.message);
+           }
+        }
 
-        // 2. Hapus data dari database Neon
-        await Tokoh.destroy({
-            where: { id_tokoh: req.params.id_tokoh }
-        });
+        // 2. Hapus data dari database
+        await Tokoh.destroy({ where: { id_tokoh: req.params.id_tokoh } });
 
         res.status(200).json({ msg: "Tokoh berhasil dihapus" });
     } catch (error) {
-        console.log(error.message);
-        res.status(500).json({ msg: "Terjadi kesalahan server" });
+        console.error("Error deleteTokoh:", error.message);
+        res.status(500).json({ msg: "Terjadi kesalahan pada server" });
     }
 };
