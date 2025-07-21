@@ -116,8 +116,13 @@ export const deleteTokoh = async (req, res) => {
 if (!tokoh) return res.status(404).json({ msg: "Tokoh tidak ditemukan" });
 
         if (tokoh.gambar) {
-            await del(tokoh.gambar);
-        }
+    try {
+        const parsedUrl = new URL(tokoh.gambar);
+        await del(parsedUrl.pathname);
+    } catch (err) {
+        console.error("Gagal hapus gambar dari blob:", err.message);
+    }
+}
 
         // 2. Hapus data dari database Neon
         await Tokoh.destroy({
