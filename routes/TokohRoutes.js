@@ -21,7 +21,7 @@ router.get('/tokoh', getTokoh);
 router.get('/tokoh/:id_tokoh', getTokohById);
 
 // Gunakan middleware 'upload' untuk rute yang membutuhkan file
-router.post('/tokoh', authMiddleware, upload, createTokoh);
+router.post('/add-tokoh', authMiddleware, upload, createTokoh);
 router.put('/tokoh/:id_tokoh', authMiddleware, upload, updateTokoh);
 
 router.delete('/tokoh/:id_tokoh', authMiddleware, deleteTokoh);
