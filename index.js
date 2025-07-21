@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import session from "express-session";
 import db from "./config/Database.js";
 import UserRoute from "./routes/UserRoute.js";
 import BeritaRoutes from "./routes/BeritaRoutes.js";
