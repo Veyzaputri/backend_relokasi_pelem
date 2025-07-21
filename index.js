@@ -18,6 +18,18 @@ app.use(cors({
   origin: "https://desa-relokasi-pelem.my.id"
 }));
 
+app.use(session({
+    secret: process.env.SESS_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        httpOnly: true,
+        secure: true,
+        sameSite: "None",
+        maxAge: 1000 * 60 * 60
+    }
+}));
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(fileUpload());
