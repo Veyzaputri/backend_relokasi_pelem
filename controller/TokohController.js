@@ -62,52 +62,68 @@ if (!jabatan || jabatan.trim() === "") {
 
 
 export const updateTokoh = async (req, res) => {
-  try {
-    const id = req.params.id_tokoh;
-    const tokoh = await Tokoh.findByPk(id);
-    if (!tokoh) return res.status(404).json({ msg: "Tokoh tidak ditemukan" });
+    try {
+        const tokoh = await Tokoh.findOne({
+            where: {
+                id: req.params.id
+            }
+        });
 
-    const { nama_tokoh, jabatan } = req.body;
-    let imageUrl = tokoh.gambar;
-
-    if (req.file) {
-      try {
-        if (tokoh.gambar) {
-          const parsedUrl = new URL(tokoh.gambar);
-        const blobName = parsedUrl.pathname.substring(1); // buang '/' di depan
-        await del(blobName);
+        if (!tokoh) {
+            return res.status(404).json({ msg: "Tokoh tidak ditemukan" });
         }
-      } catch (err) {
-        console.error("Gagal menghapus gambar lama:", err.message);
-      }
 
-      try {
-        const { url } = await put(
-          `tokoh/${req.file.originalname}`,
-          req.file.buffer,
-          { access: 'public' }
-        );
-        imageUrl = url;
-      } catch (err) {
-        console.error("Gagal meng-upload gambar baru:", err.message);
-        return res.status(500).json({ msg: "Gagal meng-upload gambar baru" });
-      }
+        let fileName = tokoh.gambar; // Default to the old image name
+
+        // If a new file is uploaded, handle the file update
+        if (req.files) {
+            const file = req.files.file;
+            const fileSize = file.data.length;
+            const ext = path.extname(file.name);
+            fileName = file.md5 + ext;
+
+            const allowedType = ['.png', '.jpg', '.jpeg'];
+
+            if (!allowedType.includes(ext.toLowerCase())) {
+                return res.status(422).json({ msg: "Invalid Images" });
+            }
+            if (fileSize > 5000000) {
+                return res.status(422).json({ msg: "Image must be less than 5 MB" });
+            }
+
+            // Delete the old file
+            const filepath = `./public/images/${tokoh.gambar}`;
+            if (fs.existsSync(filepath)) {
+                fs.unlinkSync(filepath);
+            }
+
+            // Save the new file
+            file.mv(`./public/images/${fileName}`, (err) => {
+                if (err) {
+                    return res.status(500).json({ msg: err.message });
+                }
+            });
+        }
+
+        const { nama_tokoh, jabatan } = req.body;
+        const url = `${req.protocol}://${req.get("host")}/images/${fileName}`;
+
+        await Tokoh.update({
+            nama_tokoh: nama_tokoh,
+            jabatan: jabatan,
+            gambar: fileName, // This will be either the new fileName or the original one
+            url: url
+        }, {
+            where: {
+                id: req.params.id
+            }
+        });
+
+        res.status(200).json({ msg: "Tokoh Berhasil diupdate" });
+    } catch (error) {
+        console.log(error.message);
+        res.status(500).json({ msg: "Internal Server Error" });
     }
-
-    await Tokoh.update(
-      {
-        nama_tokoh,
-        jabatan,
-        gambar: imageUrl,
-      },
-      { where: { id_tokoh: id } }
-    );
-
-    res.status(200).json({ msg: "Tokoh berhasil diperbarui" });
-  } catch (error) {
-    console.error("Error updateTokoh:", error.message);
-    res.status(500).json({ msg: "Terjadi kesalahan server" });
-  }
 };
 
 
