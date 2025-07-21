@@ -1,8 +1,9 @@
 import User from "../models/UserModel.js";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 
 // GET all users
-async function getUsers(req, res) {
+export async function getUsers(req, res) {
   try {
     const response = await User.findAll();
     res.status(200).json(response);
@@ -12,11 +13,9 @@ async function getUsers(req, res) {
 }
 
 // GET user by ID
-async function getUserById(req, res) {
+export async function getUserById(req, res) {
   try {
-    const response = await User.findOne({
-      where: { id: req.params.id },
-    });
+    const response = await User.findOne({ where: { id: req.params.id } });
     res.status(200).json(response);
   } catch (error) {
     res.status(500).json({ msg: error.message });
@@ -24,7 +23,7 @@ async function getUserById(req, res) {
 }
 
 // REGISTER
-async function createUser(req, res) {
+export async function createUser(req, res) {
   try {
     const { username, password } = req.body;
     const hashPassword = await bcrypt.hash(password, 5);
@@ -39,7 +38,7 @@ async function createUser(req, res) {
 }
 
 // UPDATE
-async function updateUser(req, res) {
+export async function updateUser(req, res) {
   try {
     const { username, password } = req.body;
     let updatedData = { username };
@@ -64,7 +63,7 @@ async function updateUser(req, res) {
 }
 
 // DELETE
-async function deleteUser(req, res) {
+export async function deleteUser(req, res) {
   try {
     await User.destroy({ where: { id: req.params.id } });
     res.status(200).json({ msg: "User berhasil dihapus" });
@@ -73,49 +72,40 @@ async function deleteUser(req, res) {
   }
 }
 
-// LOGIN (tanpa token, pakai session)
-async function loginHandler(req, res) {
+// LOGIN menggunakan JWT
+export async function loginHandler(req, res) {
   try {
     const { username, password } = req.body;
-    console.log("Username masuk:", username);
-    console.log("Password masuk:", password);
     const user = await User.findOne({ where: { username } });
 
     if (!user) return res.status(404).json({ msg: "User tidak ditemukan" });
-    console.log("Password dari client:", password);
-    console.log("Password dari database:", user.password);
+
     const match = await bcrypt.compare(password, user.password);
     if (!match) return res.status(400).json({ msg: "Password salah" });
 
-    req.session.userId = user.id;
-    req.session.username = user.username;
-    console.log("Session setelah login:", req.session);
-
-    res.status(200).json({
-      msg: "Login berhasil",
-      user: { id: user.id, username: user.username },
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, {
+      expiresIn: "1d"
     });
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "None",
+      maxAge: 24 * 60 * 60 * 1000
+    });
+
+    res.status(200).json({ msg: "Login berhasil" });
   } catch (error) {
     res.status(500).json({ msg: error.message });
   }
 }
 
 // LOGOUT
-async function logout(req, res) {
-  req.session.destroy(err => {
-    if (err) return res.status(500).json({ msg: "Logout gagal" });
-    res.clearCookie('connect.sid');
-    res.status(200).json({ msg: "Logout berhasil" });
+export async function logout(req, res) {
+  res.clearCookie("token", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "None"
   });
+  return res.status(200).json({ msg: "Logout berhasil" });
 }
-
-// Export semua fungsi
-export {
-  getUsers,
-  getUserById,
-  createUser,
-  updateUser,
-  deleteUser,
-  loginHandler,
-  logout,
-};
