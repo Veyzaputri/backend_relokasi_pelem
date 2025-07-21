@@ -74,7 +74,8 @@ export const updateTokoh = async (req, res) => {
       try {
         if (tokoh.gambar) {
           const parsedUrl = new URL(tokoh.gambar);
-          await del(parsedUrl.pathname); // ✅ Aman
+        const blobName = parsedUrl.pathname.substring(1); // buang '/' di depan
+        await del(blobName);
         }
       } catch (err) {
         console.error("Gagal menghapus gambar lama:", err.message);
