@@ -1,52 +1,65 @@
+// File: index.js
+
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import fileUpload from "express-fileupload";
+import cookieParser from "cookie-parser";
+
+// Middleware untuk menangani file, gantikan express-fileupload
+import multer from "multer";
+
 import db from "./config/Database.js";
 import { authMiddleware } from "./middleware/AuthMiddleware.js";
 import UserRoute from "./routes/UserRoute.js";
 import BeritaRoutes from "./routes/BeritaRoutes.js";
 import TokohRoutes from "./routes/TokohRoutes.js";
-import cookieParser from "cookie-parser";
 import User from "./models/UserModel.js";
 
 dotenv.config();
-
 const app = express();
+
+// Konfigurasi Multer untuk menyimpan file di memory (buffer)
+const upload = multer({ storage: multer.memoryStorage() });
+
+// === KONEKSI DATABASE (jika ada) ===
+(async () => {
+    try {
+        await db.authenticate();
+        console.log('Database Connected...');
+    } catch (error) {
+        console.error('Connection Error:', error);
+    }
+})();
+
 
 // === MIDDLEWARE ===
 app.use(cors({
-  credentials: true,
-  origin: "https://desa-relokasi-pelem.my.id"
+    credentials: true,
+    origin: "https://desa-relokasi-pelem.my.id"
 }));
 
-
-app.use(fileUpload());
-app.use(express.json());
-app.use(express.static("public"));
 app.use(cookieParser());
-
-// (Opsional: Sinkronisasi tabel session)
-// await store.sync();
+app.use(express.json()); // Middleware untuk membaca body JSON
+app.use(express.static("public"));
 
 // === ROUTING ===
-// Daftarkan route Anda SETELAH semua middleware di atas
+// Gunakan route Anda di sini
 app.use(UserRoute);
 app.use(BeritaRoutes);
+// Penting: TokohRoutes akan kita modifikasi agar menggunakan 'upload'
 app.use(TokohRoutes);
 
+// Endpoint Whoami
 app.get("/whoami", authMiddleware, async (req, res) => {
-  try {
-    const user = await User.findByPk(req.userId, {
-      attributes: ["id", "username"] // ✅ Sesuaikan jika butuh email, role, dll
-    });
-
-    if (!user) return res.status(404).json({ msg: "User tidak ditemukan" });
-
-    res.json(user);
-  } catch (err) {
-    res.status(500).json({ msg: err.message });
-  }
+    try {
+        const user = await User.findByPk(req.userId, {
+            attributes: ["id", "username"]
+        });
+        if (!user) return res.status(404).json({ msg: "User tidak ditemukan" });
+        res.json(user);
+    } catch (err) {
+        res.status(500).json({ msg: err.message });
+    }
 });
 
 const PORT = process.env.PORT || 5000;
