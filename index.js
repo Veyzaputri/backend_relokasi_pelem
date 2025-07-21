@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import db from "./config/Database.js";
+import AuthMiddleware from "./middleware/AuthMiddleware.js";
 import UserRoute from "./routes/UserRoute.js";
 import BeritaRoutes from "./routes/BeritaRoutes.js";
 import TokohRoutes from "./routes/TokohRoutes.js";
