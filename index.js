@@ -2,7 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import db from "./config/Database.js";
-import AuthMiddleware from "./middleware/AuthMiddleware.js";
+import { authMiddleware } from "./middleware/AuthMiddleware.js";
 import UserRoute from "./routes/UserRoute.js";
 import BeritaRoutes from "./routes/BeritaRoutes.js";
 import TokohRoutes from "./routes/TokohRoutes.js";
@@ -34,10 +34,10 @@ app.use(UserRoute);
 app.use(BeritaRoutes);
 app.use(TokohRoutes);
 
-app.get("/whoami", AuthMiddleware, async (req, res) => {
+app.get("/whoami", authMiddleware, async (req, res) => {
   try {
     const user = await User.findByPk(req.userId, {
-      attributes: ["id", "username"]
+      attributes: ["id", "username"] // ✅ Sesuaikan jika butuh email, role, dll
     });
 
     if (!user) return res.status(404).json({ msg: "User tidak ditemukan" });
@@ -47,7 +47,6 @@ app.get("/whoami", AuthMiddleware, async (req, res) => {
     res.status(500).json({ msg: err.message });
   }
 });
-
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
