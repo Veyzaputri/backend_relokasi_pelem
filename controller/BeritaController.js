@@ -1,12 +1,10 @@
-import { where } from "sequelize";
-import fs from "fs";
-import path from "path";
 import { put, del } from '@vercel/blob';
 import Berita from "../models/BeritaModel.js";
 
+// GET Semua Berita
 export const getBerita = async (req, res) => {
     try {
-        const response = await Berita.findAll({order: [['createdAt', 'DESC']],});
+        const response = await Berita.findAll({ order: [['createdAt', 'DESC']] });
         res.status(200).json(response);
     } catch (error) {
         console.log(error.message);
@@ -14,10 +12,12 @@ export const getBerita = async (req, res) => {
     }
 }
 
+// GET Berita Berdasarkan ID
 export const getBeritaById = async (req, res) => {
     try {
+        // Menggunakan req.params.id agar konsisten
         const berita = await Berita.findOne({
-            where: { id_berita: req.params.id_berita }
+            where: { id_berita: req.params.id }
         });
 
         if (!berita) {
@@ -31,7 +31,7 @@ export const getBeritaById = async (req, res) => {
     }
 }
 
-
+// CREATE Berita Baru
 export const createBerita = async (req, res) => {
     try {
         const { isi_berita } = req.body;
@@ -42,17 +42,21 @@ export const createBerita = async (req, res) => {
             return res.status(400).json({ msg: "File gambar wajib di-upload" });
         }
 
-        // 1. Upload file dari memori (req.file.buffer) ke Vercel Blob
+        const fileName = `berita/${req.file.originalname}`;
+        
+        // 1. Upload file ke Vercel Blob dengan nama unik
         const { url } = await put(
-            `berita/${req.file.originalname}`, // Nama file di Blob
-            req.file.buffer,                  // Konten file
-            { access: 'public' }              // Akses publik agar bisa dilihat
+            fileName,
+            req.file.buffer, {
+                access: 'public',
+                addRandomSuffix: true, // <-- PERBAIKAN: Menjamin nama file selalu unik
+            }
         );
 
-        // 2. Simpan URL dari Blob ke database Neon Anda
+        // 2. Simpan URL dari Blob ke database
         await Berita.create({
             isi_berita,
-            gambar: url, // <-- Simpan URL-nya, bukan nama file
+            gambar: url,
         });
 
         res.status(201).json({ msg: "Berita berhasil ditambahkan" });
@@ -62,36 +66,37 @@ export const createBerita = async (req, res) => {
     }
 };
 
-
+// UPDATE Berita
 export const updateBerita = async (req, res) => {
     try {
-        const berita = await Berita.findByPk(req.params.id_berita);
+        // Menggunakan req.params.id agar konsisten
+        const berita = await Berita.findByPk(req.params.id);
         if (!berita) return res.status(404).json({ msg: "Berita tidak ditemukan" });
 
         const { isi_berita } = req.body;
         let imageUrl = berita.gambar; // Defaultnya adalah URL gambar lama
 
-        // Jika ada file baru yang di-upload
+        // Jika ada file baru yang di-upload, timpa file lama
         if (req.file) {
-            // 1. Hapus gambar lama dari Vercel Blob jika ada
-            if (berita.gambar) {
-                await del(berita.gambar);
-            }
-            // 2. Upload gambar baru
+            const fileName = `berita/${req.file.originalname}`;
+            
+            // Upload gambar baru dan timpa yang lama jika ada
             const { url } = await put(
-                `berita/${req.file.originalname}`,
-                req.file.buffer,
-                { access: 'public' }
+                fileName, // Path/nama file di blob
+                req.file.buffer, {
+                    access: 'public',
+                    allowOverwrite: true, // <-- PERBAIKAN: Izinkan menimpa file
+                }
             );
             imageUrl = url; // Gunakan URL baru
         }
 
-        // 3. Update data di Neon dengan URL gambar yang sesuai
+        // Update data di database dengan URL gambar yang sesuai
         await Berita.update({
             isi_berita,
             gambar: imageUrl,
         }, {
-            where: { id_berita: req.params.id_berita }
+            where: { id_berita: req.params.id } // Menggunakan req.params.id
         });
 
         res.status(200).json({ msg: "Berita berhasil diperbarui" });
@@ -101,11 +106,11 @@ export const updateBerita = async (req, res) => {
     }
 };
 
-
-// DELETE: Hapus file di Blob, lalu hapus data di Neon
+// DELETE Berita
 export const deleteBerita = async (req, res) => {
     try {
-        const berita = await Berita.findByPk(req.params.id_berita);
+        // Menggunakan req.params.id agar konsisten
+        const berita = await Berita.findByPk(req.params.id);
         if (!berita) return res.status(404).json({ msg: "Berita tidak ditemukan" });
 
         // 1. Hapus gambar dari Vercel Blob menggunakan URL yang tersimpan
@@ -113,9 +118,9 @@ export const deleteBerita = async (req, res) => {
             await del(berita.gambar);
         }
 
-        // 2. Hapus data dari database Neon
+        // 2. Hapus data dari database
         await Berita.destroy({
-            where: { id_berita: req.params.id_berita }
+            where: { id_berita: req.params.id } // Menggunakan req.params.id
         });
 
         res.status(200).json({ msg: "Berita berhasil dihapus" });
