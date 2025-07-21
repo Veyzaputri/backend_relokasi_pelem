@@ -1,22 +1,29 @@
+// File: routes/TokohRoutes.js
+
 import express from "express";
+import multer from "multer";
 import {
     getTokoh,
     getTokohById,
     createTokoh,
     updateTokoh,
     deleteTokoh
-} from "../controller/TokohController.js";
+} from "../controllers/TokohController.js";
 import { authMiddleware } from "../middleware/AuthMiddleware.js";
-import multer from "multer";
 
 const router = express.Router();
-const storage = multer.memoryStorage();
-const upload = multer({ storage: storage });
 
-router.get("/tokoh", getTokoh);
-router.get("/tokoh/:id_tokoh",authMiddleware, getTokohById);
-router.post("/add-tokoh",authMiddleware, upload.single('file'), createTokoh);
-router.put("/tokoh/:id_tokoh",authMiddleware, upload.single("file"), updateTokoh);
-router.delete("/tokoh/:id_tokoh",authMiddleware, deleteTokoh);
+// Konfigurasi multer untuk menangani satu file dengan nama field 'file'
+const upload = multer({ storage: multer.memoryStorage() }).single('file');
+
+// Definisikan rute Anda
+router.get('/tokoh', getTokoh);
+router.get('/tokoh/:id_tokoh', getTokohById);
+
+// Gunakan middleware 'upload' untuk rute yang membutuhkan file
+router.post('/tokoh', authMiddleware, upload, createTokoh);
+router.put('/tokoh/:id_tokoh', authMiddleware, upload, updateTokoh);
+
+router.delete('/tokoh/:id_tokoh', authMiddleware, deleteTokoh);
 
 export default router;
