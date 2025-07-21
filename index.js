@@ -2,9 +2,9 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import db from "./config/Database.js";
-import UserRoute from "./routes/UserRoutes.js";
-import BeritaRoute from "./routes/BeritaRoutes.js";
-import TokohRoute from "./routes/TokohRoutes.js";
+import UserRoute from "./routes/UserRoute.js";
+import BeritaRoutes from "./routes/BeritaRoutes.js";
+import TokohRoutes from "./routes/TokohRoutes.js";
 import fileUpload from "express-fileupload";
 import cookieParser from "cookie-parser";
 
