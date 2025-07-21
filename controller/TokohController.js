@@ -67,23 +67,31 @@ export const updateTokoh = async (req, res) => {
     const tokoh = await Tokoh.findByPk(id);
     if (!tokoh) return res.status(404).json({ msg: "Tokoh tidak ditemukan" });
 
-    const { nama_tokoh, jabatan} = req.body;
+    const { nama_tokoh, jabatan } = req.body;
     let imageUrl = tokoh.gambar;
 
     if (req.file) {
-            // 1. Hapus gambar lama dari Vercel Blob jika ada
-            if (tokoh.gambar) {
-                const parsedUrl = new URL(tokoh.gambar);
-                await del(parsedUrl.pathname);
-            }
-            // 2. Upload gambar baru
-            const { url } = await put(
-                `tokoh/${req.file.originalname}`,
-                req.file.buffer,
-                { access: 'public' }
-            );
-            imageUrl = url; // Gunakan URL baru
+      try {
+        if (tokoh.gambar) {
+          const parsedUrl = new URL(tokoh.gambar);
+          await del(parsedUrl.pathname); // ✅ Aman
         }
+      } catch (err) {
+        console.error("Gagal menghapus gambar lama:", err.message);
+      }
+
+      try {
+        const { url } = await put(
+          `tokoh/${req.file.originalname}`,
+          req.file.buffer,
+          { access: 'public' }
+        );
+        imageUrl = url;
+      } catch (err) {
+        console.error("Gagal meng-upload gambar baru:", err.message);
+        return res.status(500).json({ msg: "Gagal meng-upload gambar baru" });
+      }
+    }
 
     await Tokoh.update(
       {
@@ -96,10 +104,11 @@ export const updateTokoh = async (req, res) => {
 
     res.status(200).json({ msg: "Tokoh berhasil diperbarui" });
   } catch (error) {
-    console.error(error.message);
+    console.error("Error updateTokoh:", error.message);
     res.status(500).json({ msg: "Terjadi kesalahan server" });
   }
 };
+
 
 export const deleteTokoh = async (req, res) => {
     try {
