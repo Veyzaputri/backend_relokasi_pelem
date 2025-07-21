@@ -69,9 +69,14 @@ export const updateTokoh = async (req, res) => {
         }
 
         const { nama_tokoh, jabatan } = req.body;
+        // Validasi input dasar
+        if (!nama_tokoh || !jabatan) {
+            return res.status(400).json({ msg: "Nama tokoh dan jabatan tidak boleh kosong." });
+        }
+
         let fileName = tokoh.gambar; // Default ke gambar lama
 
-        // Cek jika ada file baru yang diunggah (request adalah multipart/form-data)
+        // Cek jika ada file baru yang diunggah
         if (req.files && req.files.file) {
             const file = req.files.file;
             const fileSize = file.data.length;
@@ -81,25 +86,24 @@ export const updateTokoh = async (req, res) => {
             const allowedType = ['.png', '.jpg', '.jpeg'];
             if (!allowedType.includes(ext.toLowerCase())) return res.status(422).json({ msg: "Format gambar tidak valid." });
             if (fileSize > 5000000) return res.status(422).json({ msg: "Ukuran gambar harus kurang dari 5 MB." });
-            
-            // Simpan file baru
-            const newFilePath = `./public/images/${newFileName}`;
-            await file.mv(newFilePath);
 
-            // Hapus file lama JIKA ada dan BEDA dari yang baru
+            const newFilePath = `./public/images/${newFileName}`;
+            await file.mv(newFilePath); // Simpan file baru
+
+            // Hapus file lama jika ada dan beda nama
             const oldFilePath = `./public/images/${tokoh.gambar}`;
             if (tokoh.gambar && fs.existsSync(oldFilePath)) {
                 fs.unlinkSync(oldFilePath);
             }
             
-            fileName = newFileName; // Update fileName untuk disimpan ke database
+            fileName = newFileName; // Gunakan nama file baru
         }
 
         const url = `${req.protocol}://${req.get("host")}/images/${fileName}`;
 
         await Tokoh.update({
-            nama_tokoh: nama_tokoh,
-            jabatan: jabatan,
+            nama_tokoh,
+            jabatan,
             gambar: fileName,
             url: url
         }, {
