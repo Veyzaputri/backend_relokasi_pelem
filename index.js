@@ -1,43 +1,24 @@
 import express from "express";
 import cors from "cors";
-import session from "express-session";
 import dotenv from "dotenv";
 import db from "./config/Database.js";
-import SequelizeStore from "connect-session-sequelize";
 import UserRoute from "./routes/UserRoute.js";
-// Pastikan semua file route Anda diimpor dengan benar
-// import BeritaRoutes from "./routes/BeritaRoutes.js"; 
-// import TokohRoutes from "./routes/TokohRoutes.js";
 import fileUpload from "express-fileupload";
+import cookieParser from "cookie-parser";
 
 dotenv.config();
 
 const app = express();
-const store = new SequelizeStore(session.Store)({ db: db });
 
-// === URUTAN MIDDLEWARE INI SANGAT PENTING ===
-
-// 1. CORS: Izinkan permintaan dari frontend Anda
+// === MIDDLEWARE ===
 app.use(cors({
-    credentials: true,
-    origin: 'https://desa-relokasi-pelem.my.id' // Pastikan domain ini benar
+  credentials: true,
+  origin: "https://desa-relokasi-pelem.my.id"
 }));
 
-// 2. Body Parsers: Ajari Express cara membaca JSON
-// Middleware ini WAJIB ada SEBELUM app.use(UserRoute)
-app.use(express.json()); 
-
-// 3. Session: Atur session setelah CORS dan body parser
-app.use(session({
-    secret: process.env.SESS_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    store: store,
-    cookie: {
-        secure: 'auto',
-    }
-}));
-
+app.use(express.json());
+app.use(cookieParser());
+app.use(fileUpload());
 // (Opsional: Sinkronisasi tabel session)
 // await store.sync();
 
