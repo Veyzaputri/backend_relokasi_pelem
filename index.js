@@ -32,6 +32,20 @@ app.use(UserRoute);
 app.use(BeritaRoutes);
 app.use(TokohRoutes);
 
+app.get("/whoami", AuthMiddleware, async (req, res) => {
+  try {
+    const user = await User.findByPk(req.userId, {
+      attributes: ["id", "username"]
+    });
+
+    if (!user) return res.status(404).json({ msg: "User tidak ditemukan" });
+
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ msg: err.message });
+  }
+});
+
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
