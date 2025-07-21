@@ -8,7 +8,7 @@ import {
     createTokoh,
     updateTokoh,
     deleteTokoh
-} from "../controllers/TokohController.js";
+} from "../controller/TokohController.js";
 import { authMiddleware } from "../middleware/AuthMiddleware.js";
 
 const router = express.Router();
