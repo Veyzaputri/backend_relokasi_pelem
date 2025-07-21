@@ -73,7 +73,8 @@ export const updateTokoh = async (req, res) => {
     if (req.file) {
             // 1. Hapus gambar lama dari Vercel Blob jika ada
             if (tokoh.gambar) {
-                await del(tokoh.gambar);
+                const parsedUrl = new URL(tokoh.gambar);
+                await del(parsedUrl.pathname);
             }
             // 2. Upload gambar baru
             const { url } = await put(
