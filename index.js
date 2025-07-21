@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import session from "express-session";
 import db from "./config/Database.js";
 import UserRoute from "./routes/UserRoute.js";
 import BeritaRoutes from "./routes/BeritaRoutes.js";
@@ -19,17 +18,7 @@ app.use(cors({
   origin: "https://desa-relokasi-pelem.my.id"
 }));
 
-app.use(session({
-    secret: process.env.SESS_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-        httpOnly: true,
-        secure: true,
-        sameSite: "None",
-        maxAge: 1000 * 60 * 60
-    }
-}));
+
 
 app.use(express.json());
 app.use(cookieParser());
