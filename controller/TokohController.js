@@ -63,83 +63,56 @@ if (!jabatan || jabatan.trim() === "") {
 
 export const updateTokoh = async (req, res) => {
     try {
-        const tokoh = await Tokoh.findOne({
-            where: {
-                id: req.params.id
-            }
-        });
-
+        const tokoh = await Tokoh.findOne({ where: { id: req.params.id } });
         if (!tokoh) {
             return res.status(404).json({ msg: "Data Tokoh tidak ditemukan." });
         }
 
-        // Validasi penting: Pastikan data form (req.body) ada.
-        // Ini akan mengatasi error jika form data tidak ter-parsing dengan benar.
-        if (!req.body || !req.body.nama_tokoh || !req.body.jabatan) {
-            console.error("Error saat update: req.body tidak berisi data form yang lengkap.", req.body);
-            return res.status(400).json({ msg: "Data form tidak lengkap atau tidak terkirim dengan benar." });
-        }
-        
         const { nama_tokoh, jabatan } = req.body;
-        let fileName = tokoh.gambar; // Secara default, gunakan gambar lama
+        let fileName = tokoh.gambar; // Default ke gambar lama
 
-        // Hanya proses file jika ada file baru yang diunggah
+        // Cek jika ada file baru yang diunggah (request adalah multipart/form-data)
         if (req.files && req.files.file) {
             const file = req.files.file;
             const fileSize = file.data.length;
             const ext = path.extname(file.name);
-            fileName = file.md5 + ext;
+            const newFileName = file.md5 + ext;
 
             const allowedType = ['.png', '.jpg', '.jpeg'];
+            if (!allowedType.includes(ext.toLowerCase())) return res.status(422).json({ msg: "Format gambar tidak valid." });
+            if (fileSize > 5000000) return res.status(422).json({ msg: "Ukuran gambar harus kurang dari 5 MB." });
+            
+            // Simpan file baru
+            const newFilePath = `./public/images/${newFileName}`;
+            await file.mv(newFilePath);
 
-            if (!allowedType.includes(ext.toLowerCase())) {
-                return res.status(422).json({ msg: "Format gambar tidak valid." });
+            // Hapus file lama JIKA ada dan BEDA dari yang baru
+            const oldFilePath = `./public/images/${tokoh.gambar}`;
+            if (tokoh.gambar && fs.existsSync(oldFilePath)) {
+                fs.unlinkSync(oldFilePath);
             }
-            if (fileSize > 5000000) {
-                return res.status(422).json({ msg: "Ukuran gambar harus kurang dari 5 MB." });
-            }
-
-            const newFilepath = `./public/images/${fileName}`;
-
-            // Perbaikan Bug: Gunakan Promise untuk menunggu file.mv selesai.
-            // Ini mencegah server melanjutkan eksekusi sebelum file benar-benar tersimpan.
-            await new Promise((resolve, reject) => {
-                file.mv(newFilepath, (err) => {
-                    if (err) return reject(new Error("Gagal menyimpan file gambar baru."));
-                    resolve();
-                });
-            });
-
-            // Hapus file lama HANYA SETELAH file baru berhasil disimpan
-            const oldFilepath = `./public/images/${tokoh.gambar}`;
-            if (fs.existsSync(oldFilepath)) {
-                fs.unlinkSync(oldFilepath);
-            }
+            
+            fileName = newFileName; // Update fileName untuk disimpan ke database
         }
 
         const url = `${req.protocol}://${req.get("host")}/images/${fileName}`;
 
-        // Lakukan update ke database
         await Tokoh.update({
             nama_tokoh: nama_tokoh,
             jabatan: jabatan,
             gambar: fileName,
             url: url
         }, {
-            where: {
-                id: req.params.id
-            }
+            where: { id: req.params.id }
         });
 
         res.status(200).json({ msg: "Tokoh berhasil diperbarui." });
 
     } catch (error) {
-        // Blok catch ini sekarang akan menangani error dengan lebih baik
-        console.error("Kesalahan pada fungsi updateTokoh:", error.message);
-        res.status(500).json({ msg: "Terjadi kesalahan pada server." });
+        console.error("Kesalahan pada fungsi updateTokoh:", error);
+        res.status(500).json({ msg: "Terjadi kesalahan pada server.", error: error.message });
     }
 };
-
 export const deleteTokoh = async (req, res) => {
     try {
         const tokoh = await Tokoh.findByPk(req.params.id_tokoh);
@@ -164,4 +137,4 @@ if (!tokoh) return res.status(404).json({ msg: "Tokoh tidak ditemukan" });
         console.log(error.message);
         res.status(500).json({ msg: "Terjadi kesalahan server" });
     }
-}
+};
