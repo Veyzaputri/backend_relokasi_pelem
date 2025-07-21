@@ -70,13 +70,21 @@ export const updateTokoh = async (req, res) => {
         });
 
         if (!tokoh) {
-            return res.status(404).json({ msg: "Tokoh tidak ditemukan" });
+            return res.status(404).json({ msg: "Data Tokoh tidak ditemukan." });
         }
 
-        let fileName = tokoh.gambar; // Default to the old image name
+        // Validasi penting: Pastikan data form (req.body) ada.
+        // Ini akan mengatasi error jika form data tidak ter-parsing dengan benar.
+        if (!req.body || !req.body.nama_tokoh || !req.body.jabatan) {
+            console.error("Error saat update: req.body tidak berisi data form yang lengkap.", req.body);
+            return res.status(400).json({ msg: "Data form tidak lengkap atau tidak terkirim dengan benar." });
+        }
+        
+        const { nama_tokoh, jabatan } = req.body;
+        let fileName = tokoh.gambar; // Secara default, gunakan gambar lama
 
-        // If a new file is uploaded, handle the file update
-        if (req.files) {
+        // Hanya proses file jika ada file baru yang diunggah
+        if (req.files && req.files.file) {
             const file = req.files.file;
             const fileSize = file.data.length;
             const ext = path.extname(file.name);
@@ -85,33 +93,37 @@ export const updateTokoh = async (req, res) => {
             const allowedType = ['.png', '.jpg', '.jpeg'];
 
             if (!allowedType.includes(ext.toLowerCase())) {
-                return res.status(422).json({ msg: "Invalid Images" });
+                return res.status(422).json({ msg: "Format gambar tidak valid." });
             }
             if (fileSize > 5000000) {
-                return res.status(422).json({ msg: "Image must be less than 5 MB" });
+                return res.status(422).json({ msg: "Ukuran gambar harus kurang dari 5 MB." });
             }
 
-            // Delete the old file
-            const filepath = `./public/images/${tokoh.gambar}`;
-            if (fs.existsSync(filepath)) {
-                fs.unlinkSync(filepath);
-            }
+            const newFilepath = `./public/images/${fileName}`;
 
-            // Save the new file
-            file.mv(`./public/images/${fileName}`, (err) => {
-                if (err) {
-                    return res.status(500).json({ msg: err.message });
-                }
+            // Perbaikan Bug: Gunakan Promise untuk menunggu file.mv selesai.
+            // Ini mencegah server melanjutkan eksekusi sebelum file benar-benar tersimpan.
+            await new Promise((resolve, reject) => {
+                file.mv(newFilepath, (err) => {
+                    if (err) return reject(new Error("Gagal menyimpan file gambar baru."));
+                    resolve();
+                });
             });
+
+            // Hapus file lama HANYA SETELAH file baru berhasil disimpan
+            const oldFilepath = `./public/images/${tokoh.gambar}`;
+            if (fs.existsSync(oldFilepath)) {
+                fs.unlinkSync(oldFilepath);
+            }
         }
 
-        const { nama_tokoh, jabatan } = req.body;
         const url = `${req.protocol}://${req.get("host")}/images/${fileName}`;
 
+        // Lakukan update ke database
         await Tokoh.update({
             nama_tokoh: nama_tokoh,
             jabatan: jabatan,
-            gambar: fileName, // This will be either the new fileName or the original one
+            gambar: fileName,
             url: url
         }, {
             where: {
@@ -119,13 +131,14 @@ export const updateTokoh = async (req, res) => {
             }
         });
 
-        res.status(200).json({ msg: "Tokoh Berhasil diupdate" });
+        res.status(200).json({ msg: "Tokoh berhasil diperbarui." });
+
     } catch (error) {
-        console.log(error.message);
-        res.status(500).json({ msg: "Internal Server Error" });
+        // Blok catch ini sekarang akan menangani error dengan lebih baik
+        console.error("Kesalahan pada fungsi updateTokoh:", error.message);
+        res.status(500).json({ msg: "Terjadi kesalahan pada server." });
     }
 };
-
 
 export const deleteTokoh = async (req, res) => {
     try {
