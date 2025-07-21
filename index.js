@@ -3,53 +3,52 @@ import cors from "cors";
 import session from "express-session";
 import dotenv from "dotenv";
 import db from "./config/Database.js";
+import SequelizeStore from "connect-session-sequelize";
 import UserRoute from "./routes/UserRoute.js";
-import BeritaRoutes from "./routes/BeritaRoutes.js";
-import TokohRoutes from "./routes/TokohRoutes.js";
+// Pastikan semua file route Anda diimpor dengan benar
+// import BeritaRoutes from "./routes/BeritaRoutes.js"; 
+// import TokohRoutes from "./routes/TokohRoutes.js";
 import fileUpload from "express-fileupload";
-import path from "path";
 
 dotenv.config();
 
 const app = express();
+const store = new SequelizeStore(session.Store)({ db: db });
 
-// (Sinkronisasi database, sebaiknya hanya untuk development)
-// (async()=>{
-//     await db.sync();
-// })();
+// === URUTAN MIDDLEWARE INI SANGAT PENTING ===
 
-// MIDDLEWARE PENTING - URUTAN INI HARUS BENAR
+// 1. CORS: Izinkan permintaan dari frontend Anda
 app.use(cors({
     credentials: true,
-    origin: 'https://desa-relokasi-pelem.my.id' // Ganti dengan domain frontend Anda
+    origin: 'https://desa-relokasi-pelem.my.id' // Pastikan domain ini benar
 }));
 
-// Middleware untuk membaca JSON Body, letakkan sebelum routes
-app.use(express.json());
+// 2. Body Parsers: Ajari Express cara membaca JSON
+// Middleware ini WAJIB ada SEBELUM app.use(UserRoute)
+app.use(express.json()); 
 
-app.use(fileUpload());
-app.use(express.static("public"));
-
-// Middleware untuk Session, letakkan sebelum routes
+// 3. Session: Atur session setelah CORS dan body parser
 app.use(session({
     secret: process.env.SESS_SECRET,
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
+    store: store,
     cookie: {
-        secure: 'auto' // Otomatis secure jika di-deploy ke HTTPS
+        secure: 'auto',
     }
-    // Jika menggunakan SequelizeStore, konfigurasinya di sini
 }));
 
+// (Opsional: Sinkronisasi tabel session)
+// await store.sync();
 
-// ROUTING
+// === ROUTING ===
+// Daftarkan route Anda SETELAH semua middleware di atas
 app.use(UserRoute);
 app.use(BeritaRoutes);
 app.use(TokohRoutes);
 
 
-// Jalankan Server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, ()=> {
-    console.log(`Server up and running on port ${PORT}`);
+app.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
 });
