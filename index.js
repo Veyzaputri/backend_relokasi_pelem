@@ -8,6 +8,7 @@ import BeritaRoutes from "./routes/BeritaRoutes.js";
 import TokohRoutes from "./routes/TokohRoutes.js";
 import fileUpload from "express-fileupload";
 import cookieParser from "cookie-parser";
+import User from "./models/UserModel.js";
 
 dotenv.config();
 
