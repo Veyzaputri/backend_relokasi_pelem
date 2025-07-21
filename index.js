@@ -7,7 +7,6 @@ import { authMiddleware } from "./middleware/AuthMiddleware.js";
 import UserRoute from "./routes/UserRoute.js";
 import BeritaRoutes from "./routes/BeritaRoutes.js";
 import TokohRoutes from "./routes/TokohRoutes.js";
-import fileUpload from "express-fileupload";
 import cookieParser from "cookie-parser";
 import User from "./models/UserModel.js";
 
