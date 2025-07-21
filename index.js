@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import fileUpload from "express-fileupload";
 import db from "./config/Database.js";
 import { authMiddleware } from "./middleware/AuthMiddleware.js";
 import UserRoute from "./routes/UserRoute.js";
@@ -21,10 +22,11 @@ app.use(cors({
 }));
 
 
-
-app.use(express.json());
-app.use(cookieParser());
 app.use(fileUpload());
+app.use(express.json());
+app.use(express.static("public"));
+app.use(cookieParser());
+
 // (Opsional: Sinkronisasi tabel session)
 // await store.sync();
 
