@@ -3,6 +3,8 @@ import cors from "cors";
 import dotenv from "dotenv";
 import db from "./config/Database.js";
 import UserRoute from "./routes/UserRoute.js";
+import BeritaRoute from "./routes/BeritaRoute.js";
+import TokohRoute from "./routes/TokohRoute.js";
 import fileUpload from "express-fileupload";
 import cookieParser from "cookie-parser";
 
